@@ -90,3 +90,20 @@ func TestNormalizeKeepsRemovalRowNotInEndpointsDiff(t *testing.T) {
 		t.Errorf("removed records = %d, want >=1", removedRecords)
 	}
 }
+
+func TestNormalizeGenericChangeMapping(t *testing.T) {
+	rd := rawDiff{Changes: []rawChange{
+		{ID: "response-required-property-removed", Method: "GET", Path: "/x", Level: 3, Text: "t"},
+		{ID: "response-optional-property-added", Method: "GET", Path: "/x", Level: 1, Text: "t"},
+	}}
+	recs, sum := normalize(rd, DetectMeta{})
+	if len(recs) != 2 {
+		t.Fatalf("recs = %d, want 2", len(recs))
+	}
+	if recs[0].Kind != changes.KindResponseChanged || recs[0].Severity != changes.Breaking {
+		t.Errorf("rec0 = %+v, want response.changed/breaking", recs[0])
+	}
+	if sum.Breaking != 1 || sum.Info != 1 || sum.Modified != 2 {
+		t.Errorf("summary = %+v, want 1 breaking / 1 info / 2 modified", sum)
+	}
+}
