@@ -45,3 +45,15 @@ func TestFirstRunEstablishesBaselineNoEmit(t *testing.T) {
 		t.Error("cursor must exist after first run")
 	}
 }
+
+func TestRunOnceIdempotentWhenUnchanged(t *testing.T) {
+	dir := t.TempDir()
+	m := newMonitor(dir, &stubFetcher{etag: `"v1"`, body: specV1, unchanged: true})
+	if _, _, err := m.RunOnce(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	_, ran, err := m.RunOnce(context.Background())
+	if err != nil || ran {
+		t.Fatalf("second run ran=%v err=%v, want ran=false", ran, err)
+	}
+}
