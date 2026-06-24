@@ -2,3 +2,8 @@
 # ignores *.sh and other patterns. Re-include our shell scripts so the
 # module stays self-contained and lifts out cleanly to its own repo later.
 !script/*.sh
+
+# Go artifacts
+/bin/
+*.test
+coverage.out
