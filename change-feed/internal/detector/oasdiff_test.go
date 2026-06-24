@@ -28,3 +28,18 @@ func TestRunOasdiffDetectsAddedOperation(t *testing.T) {
 		t.Fatalf("AddedOps = %+v, want [GET /ping]", rd.AddedOps)
 	}
 }
+
+func TestRunOasdiffPopulatesCheckerRowFields(t *testing.T) {
+	base, _ := os.ReadFile("testdata/base_min.json")
+	head, _ := os.ReadFile("testdata/head_add_op.json")
+	rd, _ := runOasdiff(base, head, DefaultExclude)
+	var found bool
+	for _, c := range rd.Changes {
+		if c.ID == "endpoint-added" && c.Method == "GET" && c.Path == "/ping" {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatalf("expected an endpoint-added checker row for GET /ping; got %+v", rd.Changes)
+	}
+}

@@ -4,7 +4,9 @@ import (
 	"fmt"
 
 	"github.com/getkin/kin-openapi/openapi3"
+	"github.com/oasdiff/oasdiff/checker"
 	"github.com/oasdiff/oasdiff/diff"
+	"github.com/oasdiff/oasdiff/formatters"
 	"github.com/oasdiff/oasdiff/load"
 )
 
@@ -43,7 +45,7 @@ func runOasdiff(base, head []byte, exclude []string) (rawDiff, error) {
 		return rawDiff{}, err
 	}
 	cfg := diff.NewConfig(diff.WithExcludeElements(exclude))
-	report, _, err := diff.GetWithOperationsSourcesMap(cfg, baseInfo, headInfo)
+	report, sources, err := diff.GetWithOperationsSourcesMap(cfg, baseInfo, headInfo)
 	if err != nil {
 		return rawDiff{}, fmt.Errorf("diff: %w", err)
 	}
@@ -56,6 +58,14 @@ func runOasdiff(base, head []byte, exclude []string) (rawDiff, error) {
 			rd.DeletedOps = append(rd.DeletedOps, opRef{e.Method, e.Path})
 		}
 		rd.ModifiedOps = len(report.EndpointsDiff.Modified)
+	}
+	checks := checker.CheckBackwardCompatibilityUntilLevel(
+		checker.NewConfig(checker.GetAllChecks()), report, sources, checker.INFO)
+	for _, c := range formatters.NewChanges(checks, checker.NewLocalizer("en")) {
+		rd.Changes = append(rd.Changes, rawChange{
+			ID: c.Id, Text: c.Text, Level: int(c.Level), Method: c.Operation,
+			Path: c.Path, OperationID: c.OperationId, Section: c.Section, Fingerprint: c.Fingerprint,
+		})
 	}
 	return rd, nil
 }
