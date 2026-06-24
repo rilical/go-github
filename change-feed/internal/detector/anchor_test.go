@@ -6,7 +6,7 @@ import (
 	"testing"
 )
 
-func TestAnchorWindow(t *testing.T) {
+func TestAnchorWindowPinnedCounts(t *testing.T) {
 	base, baseErr := os.ReadFile("../../testdata/anchor/base.json")
 	head, headErr := os.ReadFile("../../testdata/anchor/head.json")
 	if baseErr != nil || headErr != nil {
