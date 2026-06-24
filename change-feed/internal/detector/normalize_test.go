@@ -44,3 +44,49 @@ func TestNormalizeRemovedOpSeverityFromDeprecation(t *testing.T) {
 		t.Errorf("Removed = %d, want 2", sum.Removed)
 	}
 }
+
+func TestNormalizeDedupsEndpointAddRemoveRows(t *testing.T) {
+	rd := rawDiff{
+		AddedOps: []opRef{{"GET", "/ping"}},
+		Changes:  []rawChange{{ID: "endpoint-added", Method: "GET", Path: "/ping", Level: 1}},
+	}
+	recs, sum := normalize(rd, DetectMeta{})
+	added := 0
+	for _, r := range recs {
+		if r.Kind == changes.KindOperationAdded {
+			added++
+		}
+	}
+	if added != 1 || sum.Added != 1 {
+		t.Fatalf("added records = %d (sum %d), want exactly 1 (no double-count)", added, sum.Added)
+	}
+}
+
+func TestNormalizeKeepsRemovalRowNotInEndpointsDiff(t *testing.T) {
+	// A removal-family checker row whose op is NOT in DeletedOps is distinct and must survive.
+	rd := rawDiff{
+		DeletedOps: []opRef{{"DELETE", "/in-set"}},
+		Changes: []rawChange{
+			{ID: "api-path-removed-without-deprecation", Method: "DELETE", Path: "/in-set", Level: 3},
+			{ID: "api-removed-without-deprecation", Method: "DELETE", Path: "/not-in-set", Level: 3},
+		},
+	}
+	recs, _ := normalize(rd, DetectMeta{})
+	var sawNotInSet bool
+	removedRecords := 0
+	for _, r := range recs {
+		if r.Kind == changes.KindOperationRemoved {
+			removedRecords++
+		}
+		if r.Path == "/not-in-set" {
+			sawNotInSet = true
+		}
+	}
+	if !sawNotInSet {
+		t.Error("removal row for an op absent from DeletedOps was wrongly dropped (undercount)")
+	}
+	// /in-set is represented once via DeletedOps; its checker row is the only one suppressed.
+	if removedRecords < 1 {
+		t.Errorf("removed records = %d, want >=1", removedRecords)
+	}
+}

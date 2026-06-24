@@ -37,6 +37,22 @@ func normalize(rd rawDiff, meta DetectMeta) ([]changes.ChangeRecord, changes.Sum
 			Severity: sev, Method: op.Method, Path: op.Path, Section: "paths",
 			Text: "operation removed: " + op.Method + " " + op.Path})
 	}
+	addedKey := opKeySet(rd.AddedOps)
+	deletedKey := opKeySet(rd.DeletedOps)
+	for _, c := range rd.Changes {
+		key := c.Method + " " + c.Path
+		if c.ID == "endpoint-added" && addedKey[key] {
+			continue
+		}
+		if isRemovalRule(c.ID) && deletedKey[key] {
+			continue
+		}
+		add(changes.ChangeRecord{ID: c.ID, Fingerprint: c.Fingerprint,
+			Kind:     changes.KindForRuleID(c.ID),
+			Severity: changes.SeverityFromOasdiffLevel(c.Level),
+			Method:   c.Method, Path: c.Path, OperationID: c.OperationID, Section: c.Section,
+			Text: c.Text})
+	}
 	return recs, summarize(recs)
 }
 
@@ -45,6 +61,14 @@ func isRemovalRule(id string) bool {
 }
 
 func hasDeprecation(id string) bool { return strings.HasSuffix(id, "-with-deprecation") }
+
+func opKeySet(ops []opRef) map[string]bool {
+	m := make(map[string]bool, len(ops))
+	for _, o := range ops {
+		m[o.Method+" "+o.Path] = true
+	}
+	return m
+}
 
 func summarize(recs []changes.ChangeRecord) changes.Summary {
 	s := changes.Summary{Total: len(recs)}
