@@ -25,5 +25,9 @@ func (detector) Detect(base, head []byte, meta DetectMeta, opts DetectOptions) (
 		return nil, changes.Summary{}, err
 	}
 	recs, sum := normalize(rd, meta)
+	if gap := coverageGap(rd, sum, meta); gap != nil {
+		recs = append(recs, *gap)
+		sum = summarize(recs)
+	}
 	return recs, sum, nil
 }
