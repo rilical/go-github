@@ -1,0 +1,4 @@
+# This module is staged inside a go-github worktree whose root .gitignore
+# ignores *.sh and other patterns. Re-include our shell scripts so the
+# module stays self-contained and lifts out cleanly to its own repo later.
+!script/*.sh

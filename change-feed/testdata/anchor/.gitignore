@@ -1,0 +1,2 @@
+# anchor specs are fetched on demand (12MB each), never committed
+*.json
