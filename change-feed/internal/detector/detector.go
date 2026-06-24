@@ -25,6 +25,12 @@ func (detector) Detect(base, head []byte, meta DetectMeta, opts DetectOptions) (
 		return nil, changes.Summary{}, err
 	}
 	recs, sum := normalize(rd, meta)
+	for i := range recs {
+		if ov, ok := opts.SeverityOverrides[recs[i].ID]; ok {
+			recs[i].Severity = ov
+		}
+	}
+	sum = summarize(recs)
 	if gap := coverageGap(rd, sum, meta); gap != nil {
 		recs = append(recs, *gap)
 		sum = summarize(recs)
