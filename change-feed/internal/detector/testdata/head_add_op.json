@@ -1,0 +1,2 @@
+{ "openapi":"3.0.3","info":{"title":"t","version":"1"},
+  "paths":{ "/health":{ "get":{ "operationId":"health","responses":{ "200":{ "description":"ok" } } } }, "/ping":{ "get":{ "operationId":"ping","responses":{ "200":{ "description":"ok" } } } } } }
