@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/github/openapi-change-feed/internal/changes"
 	"github.com/github/openapi-change-feed/internal/detector"
 	"github.com/github/openapi-change-feed/internal/output"
 	"github.com/github/openapi-change-feed/internal/specfetch"
@@ -55,5 +56,34 @@ func TestRunOnceIdempotentWhenUnchanged(t *testing.T) {
 	_, ran, err := m.RunOnce(context.Background())
 	if err != nil || ran {
 		t.Fatalf("second run ran=%v err=%v, want ran=false", ran, err)
+	}
+}
+
+type failEmitter struct{}
+
+func (failEmitter) Emit(context.Context, changes.ChangeBatch) error { return errBoom }
+
+var errBoom = errorString("emit failed")
+
+type errorString string
+
+func (e errorString) Error() string { return string(e) }
+
+func TestEmitFailureDoesNotAdvanceCursor(t *testing.T) {
+	dir := t.TempDir()
+	base := newMonitor(dir, &stubFetcher{etag: `"v1"`, body: specV1})
+	if _, _, err := base.RunOnce(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	cur, _, _ := loadCursor(filepath.Join(dir, "cursor.json"))
+	m := newMonitor(dir, &stubFetcher{etag: `"v2"`,
+		body: `{"openapi":"3.0.3","info":{"title":"t","version":"1"},"paths":{"/n":{"get":{"responses":{"200":{"description":"ok"}}}}}}`})
+	m.Emitter = failEmitter{}
+	if _, _, err := m.RunOnce(context.Background()); err == nil {
+		t.Fatal("expected emit error")
+	}
+	after, _, _ := loadCursor(filepath.Join(dir, "cursor.json"))
+	if after.ETag != cur.ETag {
+		t.Errorf("cursor advanced despite emit failure: %q -> %q", cur.ETag, after.ETag)
 	}
 }
