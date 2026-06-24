@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/github/openapi-change-feed/internal/changes"
@@ -13,6 +14,7 @@ import (
 )
 
 const specV1 = `{"openapi":"3.0.3","info":{"title":"t","version":"1"},"paths":{}}`
+const specV1Plus = `{"openapi":"3.0.3","info":{"title":"t","version":"1"},"paths":{"/ping":{"get":{"responses":{"200":{"description":"ok"}}}}}}`
 
 type stubFetcher struct {
 	etag      string
@@ -85,5 +87,39 @@ func TestEmitFailureDoesNotAdvanceCursor(t *testing.T) {
 	after, _, _ := loadCursor(filepath.Join(dir, "cursor.json"))
 	if after.ETag != cur.ETag {
 		t.Errorf("cursor advanced despite emit failure: %q -> %q", cur.ETag, after.ETag)
+	}
+}
+
+func TestMonitorSatisfiesRunContract(t *testing.T) {
+	var _ interface{ Run(context.Context) error } = Monitor{}
+}
+
+func TestReplayingSameWindowDoesNotDuplicateFeed(t *testing.T) {
+	dir := t.TempDir()
+	out := filepath.Join(dir, "out")
+	mk := func() Monitor {
+		m := newMonitor(dir, &stubFetcher{etag: `"v1"`, body: specV1})
+		m.Emitter = output.NewFileEmitter(out)
+		return m
+	}
+	if _, _, err := mk().RunOnce(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	for i := 0; i < 2; i++ {
+		m := mk()
+		m.Fetcher = &stubFetcher{etag: `"v2"`, body: specV1Plus}
+		if _, _, err := m.RunOnce(context.Background()); err != nil {
+			t.Fatal(err)
+		}
+	}
+	feed, _ := os.ReadFile(filepath.Join(out, "feed.jsonl"))
+	lines := 0
+	for _, l := range strings.Split(strings.TrimSpace(string(feed)), "\n") {
+		if strings.TrimSpace(l) != "" {
+			lines++
+		}
+	}
+	if lines != 1 {
+		t.Fatalf("feed.jsonl has %d lines after window replay, want 1 (idempotent)", lines)
 	}
 }
