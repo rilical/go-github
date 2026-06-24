@@ -22,3 +22,22 @@ func TestFetchReturnsDataAndETag(t *testing.T) {
 		t.Fatalf("got %+v", res)
 	}
 }
+
+func TestFetchHonorsNotModified(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Header.Get("If-None-Match") == `"abc"` {
+			w.WriteHeader(http.StatusNotModified)
+			return
+		}
+		_, _ = w.Write([]byte(`{}`))
+	}))
+	defer srv.Close()
+
+	res, err := New(srv.Client()).Fetch(context.Background(), srv.URL, `"abc"`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !res.Unchanged {
+		t.Fatalf("want Unchanged=true, got %+v", res)
+	}
+}
