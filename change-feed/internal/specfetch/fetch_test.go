@@ -41,3 +41,18 @@ func TestFetchHonorsNotModified(t *testing.T) {
 		t.Fatalf("want Unchanged=true, got %+v", res)
 	}
 }
+
+func TestFetchErrorsOnNon200(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusInternalServerError)
+	}))
+	defer srv.Close()
+
+	res, err := New(srv.Client()).Fetch(context.Background(), srv.URL, "")
+	if err == nil {
+		t.Fatal("expected error for non-200 status")
+	}
+	if res.Unchanged {
+		t.Fatalf("expected Unchanged=false, got %+v", res)
+	}
+}
