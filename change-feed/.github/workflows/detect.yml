@@ -27,7 +27,7 @@ jobs:
           git add state out
           git commit -m "chore: update change feed"
           git push --force-with-lease origin "$BRANCH"
-          gh pr list --head "$BRANCH" --state open --json number --jq '.[0].number' | grep -q . \
-            || gh pr create --head "$BRANCH" --base main \
+          gh pr list --head "$BRANCH" --state open --json number --jq '.[0].number // empty' | grep -q . \
+            || gh pr create --head "$BRANCH" \
                  --title "chore: update REST API change feed" \
                  --body "Automated change-feed update. Review out/report.md for the human-readable diff."
