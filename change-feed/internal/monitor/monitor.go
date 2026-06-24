@@ -20,6 +20,9 @@ type Monitor struct {
 
 // RunOnce fetches HEAD; if changed, diffs baseline->HEAD, emits, and advances the cursor.
 // The cursor advances ONLY after a successful emit. Returns (summary, ranDiff, error).
+// If the emit succeeds but the trailing saveCursor fails, RunOnce returns (summary, true, err):
+// ran=true reflects that the feed was already written, and the window marker keeps the inevitable
+// retry from duplicating it.
 func (m Monitor) RunOnce(ctx context.Context) (changes.Summary, bool, error) {
 	baseRef, baseSpec, err := loadCursor(m.CursorPath)
 	if err != nil {
