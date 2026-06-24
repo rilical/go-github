@@ -18,3 +18,29 @@ func TestNormalizeAddedOps(t *testing.T) {
 		}
 	}
 }
+
+func TestNormalizeRemovedOpSeverityFromDeprecation(t *testing.T) {
+	rd := rawDiff{
+		DeletedOps: []opRef{{"DELETE", "/old"}, {"DELETE", "/gone"}},
+		Changes: []rawChange{
+			{ID: "api-path-removed-with-deprecation", Method: "DELETE", Path: "/old", Level: 2},
+			{ID: "api-path-removed-without-deprecation", Method: "DELETE", Path: "/gone", Level: 3},
+		},
+	}
+	recs, sum := normalize(rd, DetectMeta{})
+	got := map[string]changes.Severity{}
+	for _, r := range recs {
+		if r.Kind == changes.KindOperationRemoved {
+			got[r.Path] = r.Severity
+		}
+	}
+	if got["/old"] != changes.Warn {
+		t.Errorf("/old = %v, want warn (deprecated removal)", got["/old"])
+	}
+	if got["/gone"] != changes.Breaking {
+		t.Errorf("/gone = %v, want breaking", got["/gone"])
+	}
+	if sum.Removed != 2 {
+		t.Errorf("Removed = %d, want 2", sum.Removed)
+	}
+}
