@@ -50,22 +50,24 @@ func runOasdiff(base, head []byte, exclude []string) (rawDiff, error) {
 		return rawDiff{}, fmt.Errorf("diff: %w", err)
 	}
 	var rd rawDiff
-	if report.EndpointsDiff != nil {
-		for _, e := range report.EndpointsDiff.Added {
-			rd.AddedOps = append(rd.AddedOps, opRef{e.Method, e.Path})
+	if report != nil {
+		if report.EndpointsDiff != nil {
+			for _, e := range report.EndpointsDiff.Added {
+				rd.AddedOps = append(rd.AddedOps, opRef{e.Method, e.Path})
+			}
+			for _, e := range report.EndpointsDiff.Deleted {
+				rd.DeletedOps = append(rd.DeletedOps, opRef{e.Method, e.Path})
+			}
+			rd.ModifiedOps = len(report.EndpointsDiff.Modified)
 		}
-		for _, e := range report.EndpointsDiff.Deleted {
-			rd.DeletedOps = append(rd.DeletedOps, opRef{e.Method, e.Path})
+		checks := checker.CheckBackwardCompatibilityUntilLevel(
+			checker.NewConfig(checker.GetAllChecks()), report, sources, checker.INFO)
+		for _, c := range formatters.NewChanges(checks, checker.NewLocalizer("en")) {
+			rd.Changes = append(rd.Changes, rawChange{
+				ID: c.Id, Text: c.Text, Level: int(c.Level), Method: c.Operation,
+				Path: c.Path, OperationID: c.OperationId, Section: c.Section, Fingerprint: c.Fingerprint,
+			})
 		}
-		rd.ModifiedOps = len(report.EndpointsDiff.Modified)
-	}
-	checks := checker.CheckBackwardCompatibilityUntilLevel(
-		checker.NewConfig(checker.GetAllChecks()), report, sources, checker.INFO)
-	for _, c := range formatters.NewChanges(checks, checker.NewLocalizer("en")) {
-		rd.Changes = append(rd.Changes, rawChange{
-			ID: c.Id, Text: c.Text, Level: int(c.Level), Method: c.Operation,
-			Path: c.Path, OperationID: c.OperationId, Section: c.Section, Fingerprint: c.Fingerprint,
-		})
 	}
 	return rd, nil
 }

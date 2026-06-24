@@ -18,8 +18,16 @@ func TestLoadRealSpecsSucceeds(t *testing.T) {
 }
 
 func TestRunOasdiffDetectsAddedOperation(t *testing.T) {
-	base, _ := os.ReadFile("testdata/base_min.json")
-	head, _ := os.ReadFile("testdata/head_add_op.json")
+	basePath := "testdata/base_min.json"
+	base, err := os.ReadFile(basePath)
+	if err != nil {
+		t.Fatalf("read %s: %v", basePath, err)
+	}
+	headPath := "testdata/head_add_op.json"
+	head, err := os.ReadFile(headPath)
+	if err != nil {
+		t.Fatalf("read %s: %v", headPath, err)
+	}
 	rd, err := runOasdiff(base, head, DefaultExclude)
 	if err != nil {
 		t.Fatal(err)
@@ -30,9 +38,20 @@ func TestRunOasdiffDetectsAddedOperation(t *testing.T) {
 }
 
 func TestRunOasdiffPopulatesCheckerRowFields(t *testing.T) {
-	base, _ := os.ReadFile("testdata/base_min.json")
-	head, _ := os.ReadFile("testdata/head_add_op.json")
-	rd, _ := runOasdiff(base, head, DefaultExclude)
+	basePath := "testdata/base_min.json"
+	base, err := os.ReadFile(basePath)
+	if err != nil {
+		t.Fatalf("read %s: %v", basePath, err)
+	}
+	headPath := "testdata/head_add_op.json"
+	head, err := os.ReadFile(headPath)
+	if err != nil {
+		t.Fatalf("read %s: %v", headPath, err)
+	}
+	rd, err := runOasdiff(base, head, DefaultExclude)
+	if err != nil {
+		t.Fatal(err)
+	}
 	var found bool
 	for _, c := range rd.Changes {
 		if c.ID == "endpoint-added" && c.Method == "GET" && c.Path == "/ping" {
