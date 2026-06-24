@@ -17,7 +17,13 @@ type ChangeRecord struct {
 }
 
 type Summary struct {
-	Total, Breaking, Warn, Info, Added, Removed, Modified int
+	Total    int `json:"total"`
+	Breaking int `json:"breaking"`
+	Warn     int `json:"warn"`
+	Info     int `json:"info"`
+	Added    int `json:"added"`
+	Removed  int `json:"removed"`
+	Modified int `json:"modified"`
 }
 
 type SpecRef struct {

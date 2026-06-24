@@ -1,21 +1,56 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/github/openapi-change-feed/feed.schema.json",
+  "title": "OpenAPI change feed",
   "type": "object",
-  "required": [
-    "generated_at",
-    "changes",
-    "summary"
-  ],
+  "required": ["generated_at", "changes", "summary"],
   "properties": {
+    "generated_at": { "type": "string", "format": "date-time" },
+    "base_spec": { "$ref": "#/$defs/specRef" },
+    "head_spec": { "$ref": "#/$defs/specRef" },
     "changes": {
-      "type": "array",
-      "items": {
-        "type": "object",
-        "required": [
-          "id",
-          "kind",
-          "severity"
-        ]
+      "type": ["array", "null"],
+      "items": { "$ref": "#/$defs/record" }
+    },
+    "summary": { "$ref": "#/$defs/summary" }
+  },
+  "$defs": {
+    "record": {
+      "type": "object",
+      "required": ["id", "kind", "severity"],
+      "properties": {
+        "id": { "type": "string" },
+        "fingerprint": { "type": "string" },
+        "kind": { "type": "string" },
+        "severity": { "enum": ["info", "warn", "breaking"] },
+        "method": { "type": "string" },
+        "path": { "type": "string" },
+        "operation_id": { "type": "string" },
+        "section": { "type": "string" },
+        "text": { "type": "string" },
+        "base_spec": { "type": "string" },
+        "head_spec": { "type": "string" }
+      }
+    },
+    "summary": {
+      "type": "object",
+      "required": ["total", "breaking", "warn", "info", "added", "removed", "modified"],
+      "properties": {
+        "total": { "type": "integer" },
+        "breaking": { "type": "integer" },
+        "warn": { "type": "integer" },
+        "info": { "type": "integer" },
+        "added": { "type": "integer" },
+        "removed": { "type": "integer" },
+        "modified": { "type": "integer" }
+      }
+    },
+    "specRef": {
+      "type": "object",
+      "properties": {
+        "url": { "type": "string" },
+        "etag": { "type": "string" },
+        "fetched_at": { "type": "string", "format": "date-time" }
       }
     }
   }

@@ -63,3 +63,26 @@ func TestFetchErrorsOnNon200(t *testing.T) {
 		t.Fatalf("error should name the status code, got %v", err)
 	}
 }
+
+func TestFetchSynthesizesETagWhenAbsent(t *testing.T) {
+	body := `{"openapi":"3.0.3"}`
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write([]byte(body)) // no ETag header
+	}))
+	defer srv.Close()
+
+	res, err := New(srv.Client()).Fetch(context.Background(), srv.URL, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.HasPrefix(res.ETag, "sha256:") {
+		t.Fatalf("expected a synthesized sha256 ETag when the server sends none, got %q", res.ETag)
+	}
+	res2, err := New(srv.Client()).Fetch(context.Background(), srv.URL, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res2.ETag != res.ETag {
+		t.Fatalf("synthetic ETag must be stable for identical content: %q vs %q", res.ETag, res2.ETag)
+	}
+}

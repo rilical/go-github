@@ -40,10 +40,15 @@ func loadCursor(path string) (changes.SpecRef, []byte, error) {
 
 // saveCursor writes the baseline first, then flips the cursor LAST and atomically (temp+rename).
 // Ordering note: baseline.json is written before cursor.json, so a crash between the two writes
-// leaves cursor.json pointing at the OLD ref while baseline.json already holds the NEW spec. That is
-// still safe: the next run diffs the new baseline against HEAD (only the base ETag label in the batch
-// metadata is briefly stale, not the diff content), and the emitter's window marker keeps the feed
-// from re-appending already-emitted changes. The atomic temp+rename on each file prevents torn writes.
+// leaves cursor.json pointing at the OLD ref while baseline.json already holds the NEW spec. On the
+// next run loadCursor returns the OLD ref with the NEW baseline bytes; if HEAD has not moved, the
+// diff is NEW-vs-NEW (empty) and the emitter rewrites changes.json/report.md as a zero-change
+// snapshot until the next real API change. That is a recoverable blip in the convenience snapshot
+// only: feed.jsonl, the append-only source of truth, is never corrupted (an empty diff appends
+// nothing and the window marker blocks duplicate appends). The order is deliberately baseline-first:
+// flipping it (cursor before baseline) would instead risk re-appending an already-emitted window to
+// feed.jsonl if HEAD advanced again before recovery, which corrupts the durable stream. Fully atomic
+// two-file recovery (content-addressed baselines) is deferred; this trade keeps the feed correct.
 func saveCursor(path string, ref changes.SpecRef, spec []byte) error {
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		return err

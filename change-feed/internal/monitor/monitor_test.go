@@ -149,3 +149,23 @@ func TestReplayingSameWindowDoesNotDuplicateFeed(t *testing.T) {
 		t.Fatalf("feed.jsonl has %d lines after window replay, want 1 (idempotent)", lines)
 	}
 }
+
+func TestRunOnceShortCircuitsWhenContentETagUnchanged(t *testing.T) {
+	dir := t.TempDir()
+	// A no-ETag origin: specfetch synthesizes the same content-hash ETag every
+	// time, so the response is a 200 (not a 304) yet the ETag matches the cursor.
+	m := newMonitor(dir, &stubFetcher{etag: "sha256:same", body: specV1})
+	if _, _, err := m.RunOnce(context.Background()); err != nil { // baseline
+		t.Fatal(err)
+	}
+	_, ran, err := m.RunOnce(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if ran {
+		t.Fatal("identical content (matching ETag) must not re-diff or re-emit")
+	}
+	if _, err := os.Stat(filepath.Join(dir, "changes.json")); err == nil {
+		t.Error("no changes.json snapshot should be written when content is unchanged")
+	}
+}

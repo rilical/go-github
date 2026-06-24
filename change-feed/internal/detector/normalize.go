@@ -1,12 +1,23 @@
 package detector
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"strings"
 
 	"github.com/github/openapi-change-feed/internal/changes"
 )
 
 type DetectMeta struct{ BaseSpec, HeadSpec string }
+
+// syntheticFingerprint derives a stable, unique-per-change key for records that
+// oasdiff does not fingerprint (added/removed operations) or that arrive without
+// one. Consumers dedupe the feed on Fingerprint, so every record must carry a
+// non-empty value.
+func syntheticFingerprint(kind changes.ChangeKind, method, path string) string {
+	sum := sha256.Sum256([]byte(string(kind) + "\x00" + method + "\x00" + path))
+	return hex.EncodeToString(sum[:])
+}
 
 func normalize(rd rawDiff, meta DetectMeta) ([]changes.ChangeRecord, changes.Summary) {
 	var recs []changes.ChangeRecord
@@ -15,8 +26,10 @@ func normalize(rd rawDiff, meta DetectMeta) ([]changes.ChangeRecord, changes.Sum
 		recs = append(recs, r)
 	}
 	for _, op := range rd.AddedOps {
-		add(changes.ChangeRecord{ID: "endpoint-added", Kind: changes.KindOperationAdded,
-			Severity: changes.Info, Method: op.Method, Path: op.Path, Section: "paths",
+		add(changes.ChangeRecord{ID: "endpoint-added",
+			Fingerprint: syntheticFingerprint(changes.KindOperationAdded, op.Method, op.Path),
+			Kind:        changes.KindOperationAdded,
+			Severity:    changes.Info, Method: op.Method, Path: op.Path, Section: "paths",
 			Text: "operation added: " + op.Method + " " + op.Path})
 	}
 	removalSeverity := map[opRef]changes.Severity{}
@@ -33,8 +46,10 @@ func normalize(rd rawDiff, meta DetectMeta) ([]changes.ChangeRecord, changes.Sum
 		if !ok {
 			sev = changes.Breaking
 		}
-		add(changes.ChangeRecord{ID: "operation-removed", Kind: changes.KindOperationRemoved,
-			Severity: sev, Method: op.Method, Path: op.Path, Section: "paths",
+		add(changes.ChangeRecord{ID: "operation-removed",
+			Fingerprint: syntheticFingerprint(changes.KindOperationRemoved, op.Method, op.Path),
+			Kind:        changes.KindOperationRemoved,
+			Severity:    sev, Method: op.Method, Path: op.Path, Section: "paths",
 			Text: "operation removed: " + op.Method + " " + op.Path})
 	}
 	addedKey := opKeySet(rd.AddedOps)
@@ -47,8 +62,13 @@ func normalize(rd rawDiff, meta DetectMeta) ([]changes.ChangeRecord, changes.Sum
 		if isRemovalRule(c.ID) && deletedKey[key] {
 			continue
 		}
-		add(changes.ChangeRecord{ID: c.ID, Fingerprint: c.Fingerprint,
-			Kind:     changes.KindForRuleID(c.ID),
+		kind := changes.KindForRuleID(c.ID)
+		fp := c.Fingerprint
+		if fp == "" {
+			fp = syntheticFingerprint(kind, c.Method, c.Path)
+		}
+		add(changes.ChangeRecord{ID: c.ID, Fingerprint: fp,
+			Kind:     kind,
 			Severity: changes.SeverityFromOasdiffLevel(c.Level),
 			Method:   c.Method, Path: c.Path, OperationID: c.OperationID, Section: c.Section,
 			Text: c.Text})

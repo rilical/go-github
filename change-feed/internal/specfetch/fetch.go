@@ -2,6 +2,8 @@ package specfetch
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"io"
 	"net/http"
@@ -61,5 +63,14 @@ func (f fetcher) Fetch(ctx context.Context, url, lastETag string) (FetchResult, 
 		return FetchResult{}, fmt.Errorf("fetch %s: spec exceeds %d-byte cap", url, maxSpecBytes)
 	}
 
-	return FetchResult{Data: data, ETag: resp.Header.Get("ETag")}, nil
+	// Some origins serve the spec without an ETag. Synthesize a strong validator
+	// from the body so downstream change-detection and the emit window marker have
+	// a stable per-content identity instead of an empty string.
+	etag := resp.Header.Get("ETag")
+	if etag == "" {
+		sum := sha256.Sum256(data)
+		etag = "sha256:" + hex.EncodeToString(sum[:])
+	}
+
+	return FetchResult{Data: data, ETag: etag}, nil
 }

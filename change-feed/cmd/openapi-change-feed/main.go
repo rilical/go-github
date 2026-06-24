@@ -38,6 +38,7 @@ func newDetectCmd() *cobra.Command {
 	cmd.Flags().StringVar(&specURL, "spec-url", "", "URL of the OpenAPI spec")
 	cmd.Flags().StringVar(&out, "out", "out", "output directory for feed artifacts")
 	cmd.Flags().StringVar(&cursor, "cursor", "state/cursor.json", "path to the cursor state file")
+	_ = cmd.MarkFlagRequired("spec-url")
 	return cmd
 }
 

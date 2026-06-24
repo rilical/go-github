@@ -73,3 +73,15 @@ func TestDetectEndToEndWritesFeed(t *testing.T) {
 		t.Fatalf("changes.json missing the added op:\n%s", got)
 	}
 }
+
+func TestDetectRequiresSpecURL(t *testing.T) {
+	cmd := newDetectCmd()
+	cmd.SetArgs(nil)
+	cmd.SilenceUsage, cmd.SilenceErrors = true, true
+	cmd.SetOut(io.Discard)
+	cmd.SetErr(io.Discard)
+	err := cmd.Execute()
+	if err == nil || !strings.Contains(err.Error(), "spec-url") {
+		t.Fatalf("want a required-flag error naming spec-url, got %v", err)
+	}
+}

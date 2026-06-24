@@ -35,6 +35,12 @@ func (m Monitor) RunOnce(ctx context.Context) (changes.Summary, bool, error) {
 	if res.Unchanged {
 		return changes.Summary{}, false, nil
 	}
+	if baseRef.ETag != "" && res.ETag == baseRef.ETag {
+		// Origins without ETag support never return 304; specfetch hands back a
+		// content-hash ETag instead. A matching hash means identical content, so
+		// there is nothing to diff and no snapshot to rewrite.
+		return changes.Summary{}, false, nil
+	}
 	headRef := changes.SpecRef{URL: m.SpecURL, ETag: res.ETag, FetchedAt: time.Now().UTC()}
 	if baseSpec == nil {
 		return changes.Summary{}, false, saveCursor(m.CursorPath, headRef, res.Data)

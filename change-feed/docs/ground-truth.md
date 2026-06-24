@@ -1,9 +1,9 @@
-# Ground Truth — captured from the real system (anti-slop reference)
+# Ground Truth - captured from the real system (anti-slop reference)
 
 > Captured 2026-06-24 by running the validated spike (`files/spike/`) against the real POC spec
 > pair (`files/poc/base.json` -> `head.json`), oasdiff v1.20.0, Go 1.26.4. **Every test assertion
 > in the implementation plan must match THESE observed values, not imagined ones.** If a future
-> oasdiff bump changes these, re-capture and update the plan — do not "fix" the test to a guess.
+> oasdiff bump changes these, re-capture and update the plan - do not "fix" the test to a guess.
 
 ## Why this file exists
 
@@ -26,7 +26,7 @@ serialized json bytes (sanity): 125078
 
 Window: base `1d6267568cc6...` -> head `3e08e45a052d...`.
 
-## First serialized record (exact shape — field names are ground truth)
+## First serialized record (exact shape - field names are ground truth)
 
 ```json
 {
@@ -77,7 +77,7 @@ ERR 1+2+13+20 = **36**. Total **348**. Matches headline. ✓
    only the guessed one.
 2. **`endpoint-added` count (6) == EndpointsDiff.Added (6)** and
    **`api-path-removed-without-deprecation` count (2) == EndpointsDiff.Deleted (2)**. This is why
-   the normalizer dedups checker add/remove rows against the EndpointsDiff sets — otherwise every
+   the normalizer dedups checker add/remove rows against the EndpointsDiff sets - otherwise every
    added op is double-counted (once as endpoint-added INFO, once as the EndpointsDiff add).
 3. **oasdiff ships ~992 rule keys; this real window exercises only 16.** A hand-written exhaustive
    `kindMap` of literal IDs will be wrong and rot. Use a **prefix/substring heuristic**
@@ -86,7 +86,7 @@ ERR 1+2+13+20 = **36**. Total **348**. Matches headline. ✓
    `*deprecat*`->operation.deprecated; security->security.changed) with an explicit `other` fallback.
    Keep a SMALL exact-match override table only where the heuristic is wrong. This is the DRY +
    explicit-over-clever choice and survives oasdiff growth.
-4. **`api-schema-removed` is INFO (L1)**, not breaking — a removed reusable schema component is not
+4. **`api-schema-removed` is INFO (L1)**, not breaking - a removed reusable schema component is not
    by itself a breaking endpoint change in oasdiff's model. Don't assume "removed == breaking".
 
 ## How to re-capture (when oasdiff is bumped)
