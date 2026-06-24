@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 )
 
@@ -40,6 +41,9 @@ func TestFetchHonorsNotModified(t *testing.T) {
 	if !res.Unchanged {
 		t.Fatalf("want Unchanged=true, got %+v", res)
 	}
+	if res.ETag != `"abc"` {
+		t.Fatalf("304 should round-trip lastETag, got ETag=%q", res.ETag)
+	}
 }
 
 func TestFetchErrorsOnNon200(t *testing.T) {
@@ -54,5 +58,8 @@ func TestFetchErrorsOnNon200(t *testing.T) {
 	}
 	if res.Unchanged {
 		t.Fatalf("expected Unchanged=false, got %+v", res)
+	}
+	if !strings.Contains(err.Error(), "500") {
+		t.Fatalf("error should name the status code, got %v", err)
 	}
 }
