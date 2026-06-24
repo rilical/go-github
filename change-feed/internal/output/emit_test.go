@@ -44,6 +44,20 @@ func TestEmitWritesThreeArtifacts(t *testing.T) {
 	}
 }
 
+func TestWriteFileAtomicCleansTmpOnRenameFailure(t *testing.T) {
+	dir := t.TempDir()
+	target := filepath.Join(dir, "target")
+	if err := os.Mkdir(target, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := writeFileAtomic(target, []byte("data")); err == nil {
+		t.Fatal("expected error renaming temp file onto a directory, got nil")
+	}
+	if _, err := os.Stat(target + ".tmp"); !os.IsNotExist(err) {
+		t.Fatalf("temp file %s.tmp was left behind after rename failure", target)
+	}
+}
+
 func TestEmitIsIdempotentPerWindow(t *testing.T) {
 	dir := t.TempDir()
 	e := NewFileEmitter(dir)

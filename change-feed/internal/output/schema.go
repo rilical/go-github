@@ -6,8 +6,11 @@ import (
 	"fmt"
 )
 
+// FeedSchema is the embedded JSON Schema for the change feed, exported so
+// external validators and CLI consumers can read it without importing the file.
+//
 //go:embed feed.schema.json
-var feedSchema []byte
+var FeedSchema []byte
 
 func ValidateFeed(b []byte) error {
 	var doc map[string]json.RawMessage
