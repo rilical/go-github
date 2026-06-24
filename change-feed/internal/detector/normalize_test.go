@@ -22,8 +22,11 @@ func TestNormalizeAddedOps(t *testing.T) {
 func TestNormalizeRemovedOpSeverityFromDeprecation(t *testing.T) {
 	rd := rawDiff{
 		DeletedOps: []opRef{{"DELETE", "/old"}, {"DELETE", "/gone"}},
+		// Levels mirror oasdiff v1.20.0: api-path-removed-with-deprecation is INFO(1),
+		// without-deprecation is ERR(3). Removed-op severity is derived from the deprecation
+		// suffix (Warn vs Breaking), not from the level.
 		Changes: []rawChange{
-			{ID: "api-path-removed-with-deprecation", Method: "DELETE", Path: "/old", Level: 2},
+			{ID: "api-path-removed-with-deprecation", Method: "DELETE", Path: "/old", Level: 1},
 			{ID: "api-path-removed-without-deprecation", Method: "DELETE", Path: "/gone", Level: 3},
 		},
 	}
@@ -85,9 +88,10 @@ func TestNormalizeKeepsRemovalRowNotInEndpointsDiff(t *testing.T) {
 	if !sawNotInSet {
 		t.Error("removal row for an op absent from DeletedOps was wrongly dropped (undercount)")
 	}
-	// /in-set is represented once via DeletedOps; its checker row is the only one suppressed.
-	if removedRecords < 1 {
-		t.Errorf("removed records = %d, want >=1", removedRecords)
+	// /in-set is represented once via DeletedOps (its checker row is suppressed); /not-in-set
+	// survives via the generic loop. Exactly two removed records, no double-count of /in-set.
+	if removedRecords != 2 {
+		t.Errorf("removed records = %d, want 2", removedRecords)
 	}
 }
 
